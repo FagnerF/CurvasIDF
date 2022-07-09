@@ -50,9 +50,9 @@ ScriptIDF = function(ArquivPrec){
 
     dstpearson <- PearsonDS::ppearson0(ArquivPrecCrescente,mean=mean(ArquivPrecCrescente),sd=sd(ArquivPrecCrescente))
     dstpearsonIII <- smwrBase::ppearsonIII(ArquivPrecCrescente,mean(ArquivPrecCrescente),sd(ArquivPrecCrescente),
-                                           skewness(ArquivPrecCrescente,type=1))
+                                           e1071::skewness(ArquivPrecCrescente,type=1))
     dstlpearsonIII <- smwrBase::plpearsonIII(ArquivPrecCrescente,mean(log(ArquivPrecCrescente)),sd(log(ArquivPrecCrescente)),
-                                             skewness(log(ArquivPrecCrescente),type=1))
+                                             e1071::skewness(log(ArquivPrecCrescente),type=1))
 
     fxweibull <- matrix(0,length(ArquivPrecCrescente),1)
     fxgumbel <- matrix(0,length(ArquivPrecCrescente),1)
@@ -115,9 +115,9 @@ ScriptIDF = function(ArquivPrec){
                        "GEV"= cat(X <- c(evd::qgev(1-Probab,modGEV$estimate[1],modGEV$estimate[2],modGEV$estimate[3]))),
                        "Pearson"= cat(X <- c(PearsonDS::qpearson0(1-Probab,mean(ArquivPrecCrescente),sd(ArquivPrecCrescente)))),
                        "PearsonIII"= cat(X <- c(smwrBase::qpearsonIII(1-Probab,mean(ArquivPrecCrescente),sd(ArquivPrecCrescente),
-                                                                      skewness(ArquivPrecCrescente,type=1)))),
+                                                                      e1071::skewness(ArquivPrecCrescente,type=1)))),
                        "LogPearsonIII"= cat(X <- c(smwrBase::qlpearsonIII(1-Probab,mean(log(ArquivPrecCrescente)),sd(log(ArquivPrecCrescente)),
-                                                                          skewness(log(ArquivPrecCrescente),type=1)))))
+                                                                          e1071::skewness(log(ArquivPrecCrescente),type=1)))))
 
       PMax <- matrix(0,TamanhoArquivDuracoes-1,TamanhoArquivTr)
       PMax24h <- matrix(0,1,TamanhoArquivTr)
@@ -179,68 +179,52 @@ ScriptIDF = function(ArquivPrec){
       Sum.erroInicial <- matrix(0,1,TamanhoArquivTr)
 
       function.min <- function(par) {
-
         for (i in 1:TamanhoArquivTr) {
-
           for (j in 1:TamanhoArquivDuracoes) {
-
             IMaxSim[j,i] <- (par[1]*(ArquivTr[i])^par[2])/((ArquivDuracoes[j]+par[3])^par[4])
             erro[j,i] <- abs(IMaxSim[j,i]-IMaxObs[j,i])/IMaxObs[j,i]
-
           }
-
           Sum.erroInicial[1,i] <- sum(erro[,i])
-
         }
-
-        Sum.erroFinal <- sum(Sum.erroInicial[1,])
-
+        sum(Sum.erroInicial[1,])
       }
 
-      opt <- nlminb(c(0,0,0,0),function.min,lower=c(0.01,0.01,0.01,0.01),upper=c(Inf,Inf,Inf,Inf),
-                    control=list(trace=TRUE))
+      optmin <- nlminb(c(0,0,0,0),function.min,control=list(trace=TRUE,
+                                                            iter.max=100000,eval.max=20000),
+                       lower=c(0,0,0,0),upper=c(Inf,Inf,Inf,Inf))
 
-      ErroRelativo <- opt$objective
+      kinicial <- optmin$par[1]
+      minicial <- optmin$par[2]
+      t0inicial <- optmin$par[3]
+      ninicial <- optmin$par[4]
 
       erro1 <- matrix(0,TamanhoArquivDuracoes*TamanhoArquivTr,1)
       erro2 <- matrix(0,TamanhoArquivDuracoes*TamanhoArquivTr,1)
 
-      kinicial <- opt$par[1]
-      minicial <- opt$par[2]
-      t0inicial <- opt$par[3]
-      ninicial <- opt$par[4]
-
       iter <- 0
 
       function.NS <- function(par) {
-
         for (k in 1:TamanhoArquivTr) {
-
           for (l in 1:TamanhoArquivDuracoes) {
-
             IMaxSim[l,k] <- (par[1]*(ArquivTr[k])^par[2])/((ArquivDuracoes[l]+par[3])^par[4])
             erro1[l+iter,1] <- (IMaxSim[l,k]-IMaxObs[l,k])^2
             erro2[l+iter,1] <- (IMaxObs[l,k]-mean(IMaxObs[,k]))^2
-
           }
-
           iter <- iter+1
-
         }
-
-        NS <- (1-(sum(erro1)/sum(erro2)))
-
+        (1-(sum(erro1)/sum(erro2)))
       }
 
-      function.max <- function(NS) -function.NS(NS)
+      function.max <- function(par) -function.NS(par)
 
-      opt <- optim(c(kinicial,minicial,t0inicial,ninicial),function.max,lower=c(0.01,0.01,0.01,0.01),upper=c(Inf,Inf,Inf,Inf),
-                   method="L-BFGS-B",control=list(trace=TRUE))
+      optmax <- nlminb(c(kinicial,minicial,t0inicial,ninicial),function.max,control=list(trace=TRUE,
+                                                                                         iter.max=100000,eval.max=20000),
+                       lower=c(0.01,0.01,0.01,0.01),upper=c(Inf,Inf,Inf,Inf))
 
-      kotim <- opt$par[1]
-      motim <- opt$par[2]
-      t0otim <- opt$par[3]
-      notim <- opt$par[4]
+      kotim <- optmax$par[1]
+      motim <- optmax$par[2]
+      t0otim <- optmax$par[3]
+      notim <- optmax$par[4]
 
       my_list2 <- list(kotim=kotim,motim=motim,t0otim=t0otim,notim=notim)
 

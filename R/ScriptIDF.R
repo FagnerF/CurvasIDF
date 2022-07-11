@@ -191,7 +191,7 @@ ScriptIDF = function(ArquivPrec){
 
       optmin <- nlminb(c(0,0,0,0),function.min,control=list(trace=TRUE,
                                                             iter.max=100000,eval.max=20000),
-                       lower=c(0,0,0,0),upper=c(Inf,Inf,Inf,Inf))
+                       lower=c(0.001,0.001,0.001,0.001),upper=c(Inf,Inf,Inf,Inf))
 
       kinicial <- optmin$par[1]
       minicial <- optmin$par[2]
@@ -219,7 +219,7 @@ ScriptIDF = function(ArquivPrec){
 
       optmax <- nlminb(c(kinicial,minicial,t0inicial,ninicial),function.max,control=list(trace=TRUE,
                                                                                          iter.max=100000,eval.max=20000),
-                       lower=c(0.01,0.01,0.01,0.01),upper=c(Inf,Inf,Inf,Inf))
+                       lower=c(0.001,0.001,0.001,0.001),upper=c(Inf,Inf,Inf,Inf))
 
       kotim <- optmax$par[1]
       motim <- optmax$par[2]
